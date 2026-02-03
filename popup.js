@@ -4,11 +4,11 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   document.querySelector("#about").addEventListener("click", function () {
-    window.open("https://github.com/codebicycle/videospeed");
+    window.open("https://github.com/AchalS-iglu/videospeed");
   });
 
   document.querySelector("#feedback").addEventListener("click", function () {
-    window.open("https://github.com/codebicycle/videospeed/issues");
+    window.open("https://github.com/AchalS-iglu/videospeed/issues");
   });
 
   document.querySelector("#enable").addEventListener("click", function () {
@@ -42,9 +42,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const suffix = `${enabled ? "" : "_disabled"}.png`;
     chrome.browserAction.setIcon({
       path: {
-        "19": "icons/icon19" + suffix,
-        "38": "icons/icon38" + suffix,
-        "48": "icons/icon48" + suffix
+        19: "icons/icon19" + suffix,
+        38: "icons/icon38" + suffix,
+        48: "icons/icon48" + suffix
       }
     });
   }

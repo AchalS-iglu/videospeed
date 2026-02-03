@@ -9,6 +9,7 @@ var tcDefaults = {
   forceLastSavedSpeed: false, //default: false
   enabled: true, // default enabled
   controllerOpacity: 0.3, // default: 0.3
+  siteSpeeds: "",
   keyBindings: [
     { action: "display", key: 86, value: 0, force: false, predefined: true }, // V
     { action: "slower", key: 83, value: 0.1, force: false, predefined: true }, // S
@@ -74,9 +75,9 @@ var keyCodeAliases = {
   220: "\\",
   221: "]",
   222: "'",
-  59:  ";",
-  61:  "+",
-  173: "-",
+  59: ";",
+  61: "+",
+  173: "-"
 };
 
 function recordKeyPress(e) {
@@ -131,6 +132,79 @@ function updateCustomShortcutInputText(inputItem, keyCode) {
 
 // List of custom actions for which customValue should be disabled
 var customActionsNoValues = ["pause", "muted", "mark", "jump", "display"];
+
+function add_site_speed(pattern, speed) {
+  var row = document.createElement("div");
+  row.setAttribute("class", "siteSpeedRow");
+
+  var patternInput = document.createElement("input");
+  patternInput.setAttribute("type", "text");
+  patternInput.setAttribute("placeholder", "hostname or /regex/");
+  patternInput.setAttribute("class", "siteSpeedPattern");
+  patternInput.value = pattern || "";
+
+  var speedInput = document.createElement("input");
+  speedInput.setAttribute("type", "number");
+  speedInput.setAttribute("step", "0.01");
+  speedInput.setAttribute("min", "0.10");
+  speedInput.setAttribute("class", "siteSpeedValue");
+  speedInput.value = typeof speed === "number" ? speed : "";
+
+  var removeButton = document.createElement("button");
+  removeButton.setAttribute("type", "button");
+  removeButton.setAttribute("class", "removeSiteSpeed");
+  removeButton.textContent = "X";
+
+  row.appendChild(patternInput);
+  row.appendChild(speedInput);
+  row.appendChild(removeButton);
+
+  document.getElementById("siteSpeedsList").appendChild(row);
+}
+
+function parseSiteSpeedsText(text) {
+  var rules = [];
+  text.split("\n").forEach((line) => {
+    line = line.replace(regStrip, "");
+    if (!line) {
+      return;
+    }
+    var match = line.match(/^(.+?)(?:\s+|=)(\d+(?:\.\d+)?)$/);
+    if (!match) {
+      return;
+    }
+    rules.push({
+      pattern: match[1].replace(regStrip, ""),
+      speed: Number(match[2])
+    });
+  });
+  return rules;
+}
+
+function renderSiteSpeeds(text) {
+  var list = document.getElementById("siteSpeedsList");
+  list.innerHTML = "";
+  var rules = parseSiteSpeedsText(text || "");
+  if (rules.length === 0) {
+    add_site_speed("", "");
+    return;
+  }
+  rules.forEach((rule) => add_site_speed(rule.pattern, rule.speed));
+}
+
+function buildSiteSpeedsText() {
+  var lines = [];
+  Array.from(document.querySelectorAll(".siteSpeedRow")).forEach((row) => {
+    var pattern = row.querySelector(".siteSpeedPattern").value;
+    var speedValue = row.querySelector(".siteSpeedValue").value;
+    pattern = pattern.replace(regStrip, "");
+    if (!pattern && !speedValue) {
+      return;
+    }
+    lines.push(pattern + " " + speedValue);
+  });
+  return lines.join("\n");
+}
 
 function add_shortcut() {
   var html = `<select class="customDo">
@@ -199,6 +273,37 @@ function validate() {
         }
       }
     });
+
+  Array.from(document.querySelectorAll(".siteSpeedRow")).forEach((row) => {
+    var pattern = row.querySelector(".siteSpeedPattern").value;
+    var speedValue = row.querySelector(".siteSpeedValue").value;
+    pattern = pattern.replace(regStrip, "");
+    if (!pattern && !speedValue) {
+      return;
+    }
+    if (!pattern || !speedValue) {
+      status.textContent =
+        "Error: Site speed entries need both hostname/regex and speed.";
+      valid = false;
+      return;
+    }
+    if (isNaN(Number(speedValue)) || Number(speedValue) <= 0) {
+      status.textContent =
+        "Error: Site speed values must be a number greater than 0.";
+      valid = false;
+      return;
+    }
+    if (pattern.startsWith("/")) {
+      try {
+        var regexp = new RegExp(pattern);
+      } catch (err) {
+        status.textContent =
+          "Error: Invalid site speed regex: " + pattern + ". Unable to save";
+        valid = false;
+        return;
+      }
+    }
+  });
   return valid;
 }
 
@@ -213,12 +318,15 @@ function save_options() {
   ); // Remove added shortcuts
 
   var rememberSpeed = document.getElementById("rememberSpeed").checked;
-  var forceLastSavedSpeed = document.getElementById("forceLastSavedSpeed").checked;
+  var forceLastSavedSpeed = document.getElementById(
+    "forceLastSavedSpeed"
+  ).checked;
   var audioBoolean = document.getElementById("audioBoolean").checked;
   var enabled = document.getElementById("enabled").checked;
   var startHidden = document.getElementById("startHidden").checked;
   var controllerOpacity = document.getElementById("controllerOpacity").value;
   var blacklist = document.getElementById("blacklist").value;
+  var siteSpeeds = buildSiteSpeedsText();
 
   chrome.storage.sync.remove([
     "resetSpeed",
@@ -242,7 +350,8 @@ function save_options() {
       startHidden: startHidden,
       controllerOpacity: controllerOpacity,
       keyBindings: keyBindings,
-      blacklist: blacklist.replace(regStrip, "")
+      blacklist: blacklist.replace(regStrip, ""),
+      siteSpeeds: siteSpeeds.replace(regStrip, "")
     },
     function () {
       // Update status to let user know options were saved.
@@ -259,13 +368,15 @@ function save_options() {
 function restore_options() {
   chrome.storage.sync.get(tcDefaults, function (storage) {
     document.getElementById("rememberSpeed").checked = storage.rememberSpeed;
-    document.getElementById("forceLastSavedSpeed").checked = storage.forceLastSavedSpeed;
+    document.getElementById("forceLastSavedSpeed").checked =
+      storage.forceLastSavedSpeed;
     document.getElementById("audioBoolean").checked = storage.audioBoolean;
     document.getElementById("enabled").checked = storage.enabled;
     document.getElementById("startHidden").checked = storage.startHidden;
     document.getElementById("controllerOpacity").value =
       storage.controllerOpacity;
     document.getElementById("blacklist").value = storage.blacklist;
+    renderSiteSpeeds(storage.siteSpeeds || "");
 
     // ensure that there is a "display" binding for upgrades from versions that had it as a separate binding
     if (storage.keyBindings.filter((x) => x.action == "display").length == 0) {
@@ -346,6 +457,9 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("save").addEventListener("click", save_options);
   document.getElementById("add").addEventListener("click", add_shortcut);
   document
+    .getElementById("addSiteSpeed")
+    .addEventListener("click", () => add_site_speed("", ""));
+  document
     .getElementById("restore")
     .addEventListener("click", restore_defaults);
   document
@@ -353,7 +467,10 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", show_experimental);
 
   function eventCaller(event, className, funcName) {
-    if (!event.target.classList || !event.target.classList.contains(className)) {
+    if (
+      !event.target.classList ||
+      !event.target.classList.contains(className)
+    ) {
       return;
     }
     funcName(event);
@@ -373,6 +490,9 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   document.addEventListener("click", (event) => {
     eventCaller(event, "removeParent", function () {
+      event.target.parentNode.remove();
+    });
+    eventCaller(event, "removeSiteSpeed", function () {
       event.target.parentNode.remove();
     });
   });

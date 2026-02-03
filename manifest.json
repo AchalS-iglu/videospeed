@@ -1,10 +1,10 @@
 {
-  "name": "Video Speed Controller",
-  "short_name": "videospeed",
+  "name": "Playback Speed Controller",
+  "short_name": "playbackspeed",
   "version": "0.6.3.3",
   "manifest_version": 2,
   "description": "Speed up, slow down, advance and rewind HTML5 audio/video with shortcuts",
-  "homepage_url": "https://github.com/codebicycle/videospeed",
+  "homepage_url": "https://github.com/AchalS-iglu/videospeed",
   "browser_specific_settings": {
     "gecko": {
       "id": "{7be2ba16-0f1e-4d93-9ebc-5164397477a9}"

@@ -5,6 +5,7 @@ var tc = {
     lastSpeed: 1.0, // default 1x
     enabled: true, // default enabled
     speeds: {}, // empty object to hold speed for each source
+    siteSpeeds: "",
 
     displayKeyCode: 86, // default: V
     rememberSpeed: false, // default: false
@@ -116,7 +117,8 @@ chrome.storage.sync.get(tc.settings, function (storage) {
       startHidden: tc.settings.startHidden,
       enabled: tc.settings.enabled,
       controllerOpacity: tc.settings.controllerOpacity,
-      blacklist: tc.settings.blacklist.replace(regStrip, "")
+      blacklist: tc.settings.blacklist.replace(regStrip, ""),
+      siteSpeeds: tc.settings.siteSpeeds
     });
   }
   tc.settings.lastSpeed = Number(storage.lastSpeed);
@@ -128,6 +130,8 @@ chrome.storage.sync.get(tc.settings, function (storage) {
   tc.settings.startHidden = Boolean(storage.startHidden);
   tc.settings.controllerOpacity = Number(storage.controllerOpacity);
   tc.settings.blacklist = String(storage.blacklist);
+  tc.settings.siteSpeeds = String(storage.siteSpeeds || "");
+  tc.settings.siteSpeedRules = parseSiteSpeedRules(tc.settings.siteSpeeds);
 
   // ensure that there is a "display" binding (for upgrades from versions that had it as a separate binding)
   if (
@@ -154,9 +158,8 @@ function getKeyBindings(action, what = "value") {
 }
 
 function setKeyBindings(action, value) {
-  tc.settings.keyBindings.find((item) => item.action === action)[
-    "value"
-  ] = value;
+  tc.settings.keyBindings.find((item) => item.action === action)["value"] =
+    value;
 }
 
 function defineVideoController() {
@@ -181,8 +184,15 @@ function defineVideoController() {
 
     this.video = target;
     this.parent = target.parentElement || parent;
+    var siteSpeed = getSiteSpeed();
     storedSpeed = tc.settings.speeds[target.currentSrc];
-    if (!tc.settings.rememberSpeed) {
+    if (siteSpeed !== null) {
+      storedSpeed = siteSpeed;
+      if (target.currentSrc) {
+        tc.settings.speeds[target.currentSrc] = siteSpeed;
+      }
+      setKeyBindings("reset", getKeyBindings("fast")); // resetSpeed = fastSpeed
+    } else if (!tc.settings.rememberSpeed) {
       if (!storedSpeed) {
         log(
           "Overwriting stored speed to 1.0 due to rememberSpeed being disabled",
@@ -202,8 +212,17 @@ function defineVideoController() {
     this.div = this.initializeControls();
 
     var mediaEventAction = function (event) {
+      var siteSpeed = getSiteSpeed();
       storedSpeed = tc.settings.speeds[event.target.currentSrc];
-      if (!tc.settings.rememberSpeed) {
+      if (siteSpeed !== null) {
+        storedSpeed = siteSpeed;
+        if (event.target.currentSrc) {
+          tc.settings.speeds[event.target.currentSrc] = siteSpeed;
+        }
+        // resetSpeed isn't really a reset, it's a toggle
+        log("Setting reset keybinding to fast", 5);
+        setKeyBindings("reset", getKeyBindings("fast")); // resetSpeed = fastSpeed
+      } else if (!tc.settings.rememberSpeed) {
         if (!storedSpeed) {
           log("Overwriting stored speed to 1.0 (rememberSpeed not enabled)", 4);
           storedSpeed = 1.0;
@@ -296,8 +315,8 @@ function defineVideoController() {
         </style>
 
         <div id="controller" style="top:${top}; left:${left}; opacity:${
-      tc.settings.controllerOpacity
-    }">
+          tc.settings.controllerOpacity
+        }">
           <span data-action="drag" class="draggable">${speed}</span>
           <span id="controls">
             <button data-action="rewind" class="rw">«</button>
@@ -355,8 +374,9 @@ function defineVideoController() {
         // this is a monstrosity but new FB design does not have *any*
         // semantic handles for us to traverse the tree, and deep nesting
         // that we need to bubble up from to get controller to stack correctly
-        let p = this.parent.parentElement.parentElement.parentElement
-          .parentElement.parentElement.parentElement.parentElement;
+        let p =
+          this.parent.parentElement.parentElement.parentElement.parentElement
+            .parentElement.parentElement.parentElement;
         p.insertBefore(fragment, p.firstChild);
         break;
       case location.hostname == "tv.apple.com":
@@ -375,6 +395,56 @@ function defineVideoController() {
 function escapeStringRegExp(str) {
   matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
   return str.replace(matchOperatorsRe, "\\$&");
+}
+
+function parseSiteSpeedRules(text) {
+  var rules = [];
+  if (!text) {
+    return rules;
+  }
+  text.split("\n").forEach((line) => {
+    line = line.replace(regStrip, "");
+    if (!line) {
+      return;
+    }
+    var match = line.match(/^(.+?)(?:\s+|=)(\d+(?:\.\d+)?)$/);
+    if (!match) {
+      return;
+    }
+    var pattern = match[1].replace(regStrip, "");
+    rules.push({
+      pattern: pattern,
+      speed: Number(match[2])
+    });
+  });
+  return rules;
+}
+
+function getSiteSpeed() {
+  if (!tc.settings.siteSpeedRules || tc.settings.siteSpeedRules.length === 0) {
+    return null;
+  }
+  var hostname = location.hostname;
+  var href = location.href;
+  for (var i = 0; i < tc.settings.siteSpeedRules.length; i++) {
+    var rule = tc.settings.siteSpeedRules[i];
+    if (rule.pattern.startsWith("/")) {
+      try {
+        var regex = new RegExp(rule.pattern);
+        if (regex.test(href)) {
+          return rule.speed;
+        }
+      } catch (err) {
+        continue;
+      }
+    } else {
+      var matchHost = rule.pattern;
+      if (hostname === matchHost || hostname.endsWith("." + matchHost)) {
+        return rule.speed;
+      }
+    }
+  }
+  return null;
 }
 
 function isBlacklisted() {
@@ -426,8 +496,7 @@ function setupListener() {
   function updateSpeedFromEvent(video) {
     // It's possible to get a rate change on a VIDEO/AUDIO that doesn't have
     // a video controller attached to it.  If we do, ignore it.
-    if (!video.vsc)
-      return;
+    if (!video.vsc) return;
     var speedIndicator = video.vsc.speedIndicator;
     var src = video.currentSrc;
     var speed = Number(video.playbackRate.toFixed(2));
@@ -481,7 +550,7 @@ function initializeWhenReady(document) {
   if (isBlacklisted()) {
     return;
   }
-  window.addEventListener('load', () => {
+  window.addEventListener("load", () => {
     initializeNow(window.document);
   });
   if (document) {
@@ -653,8 +722,7 @@ function initializeNow(document) {
                   (x) => x.tagName == "VIDEO"
                 )[0];
                 if (node) {
-                  if (node.vsc)
-                    node.vsc.remove();
+                  if (node.vsc) node.vsc.remove();
                   checkForVideo(node, node.parentNode || mutation.target, true);
                 }
               }

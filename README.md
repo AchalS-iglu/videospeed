@@ -1,4 +1,4 @@
-# The science of accelerated playback
+# Playback Speed Controller
 
 **TL;DR: faster playback translates to better engagement and retention.**
 
@@ -29,7 +29,10 @@ last point to listen to it a few more times.
 
 ![Player](https://cloud.githubusercontent.com/assets/2400185/24076745/5723e6ae-0c41-11e7-820c-1d8e814a2888.png)
 
-#### *Install [Chrome](https://chrome.google.com/webstore/detail/video-speed-controller/nffaoalbilbmmfgbnbgppjihopabppdk) or [Firefox](https://addons.mozilla.org/en-us/firefox/addon/videospeed/) Extension*
+#### *Install from source*
+
+This fork is intended for separate release by Achal Singhal. Package and
+publish from this repository as needed.
 
 \*\* Once the extension is installed simply navigate to any page that offers
 HTML5 video ([example](http://www.youtube.com/watch?v=E9FxNzv1Tr8)), and you'll
@@ -54,6 +57,25 @@ and click "Add New".
 
 ![settings Add New shortcut](https://user-images.githubusercontent.com/121805/50726471-50242200-1172-11e9-902f-0e5958387617.jpg)
 
+### Auto Speed By Site
+
+You can set an automatic playback speed per site from the options page.
+
+1. Open the extension Options page.
+2. Find **Auto speed by site** and click **Add Site Speed**.
+3. Enter a hostname (or `/regex/`) and a speed.
+
+Examples:
+
+```
+youtube.com 1.50
+docs.example.com 1.25
+/.*\.coursera\.org.*/ 1.75
+```
+
+Rules match the current hostname (exact match or subdomain). If a rule starts
+with `/`, it is treated as a JavaScript regex and matched against the full URL.
+
 Some sites may assign other functionality to one of the assigned shortcut keys —
 these collisions are inevitable, unfortunately. As a workaround, the extension
 listens both for lower and upper case values (i.e. you can use
@@ -70,13 +92,12 @@ and inspect the menu: if it mentions flash, then that's the issue. That said,
 most sites will fallback to HTML5 if they detect that Flash is not available.
 You can try manually disabling Flash from the browser.
 
-**What is this fork of `igrigorik/videospeed` all about?** This fork of the
-[`igrigorik/videospeed`](https://github.com/igrigorik/videospeed) repository
-is a port of [`igrigorik`](https://github.com/igrigorik)'s videospeed Chrome 
-add-on for Firefox. This fork modifies the Chrome add-on code so that it works 
-in Firefox. This repo is the code behind the [Firefox Extension](https://addons.mozilla.org/en-us/firefox/addon/videospeed/)
-whereas the [`igrigorik/videospeed`](https://github.com/igrigorik/videospeed)
-repository contains the code behind the [Chrome Extension](https://chrome.google.com/webstore/detail/video-speed-controller/nffaoalbilbmmfgbnbgppjihopabppdk).
+**What is this fork about?** This repository is a fork of
+[`igrigorik/videospeed`](https://github.com/igrigorik/videospeed) and the
+Firefox port maintained at
+[`codebicycle/videospeed`](https://github.com/codebicycle/videospeed). It has
+been renamed to **Playback Speed Controller** and is maintained by Achal
+Singhal for independent release.
 
 ### License
 
