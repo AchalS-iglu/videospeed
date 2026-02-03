@@ -309,25 +309,45 @@ function defineVideoController() {
     }
 
     var shadow = wrapper.attachShadow({ mode: "open" });
-    var shadowTemplate = `
-        <style>
-          @import "${chrome.runtime.getURL("shadow.css")}";
-        </style>
+    var style = document.createElement("style");
+    style.textContent =
+      '@import "' + chrome.runtime.getURL("shadow.css") + '";';
+    shadow.appendChild(style);
 
-        <div id="controller" style="top:${top}; left:${left}; opacity:${
-          tc.settings.controllerOpacity
-        }">
-          <span data-action="drag" class="draggable">${speed}</span>
-          <span id="controls">
-            <button data-action="rewind" class="rw">«</button>
-            <button data-action="slower">&minus;</button>
-            <button data-action="faster">&plus;</button>
-            <button data-action="advance" class="rw">»</button>
-            <button data-action="display" class="hideButton">&times;</button>
-          </span>
-        </div>
-      `;
-    shadow.innerHTML = shadowTemplate;
+    var controller = document.createElement("div");
+    controller.setAttribute("id", "controller");
+    controller.style.top = top;
+    controller.style.left = left;
+    controller.style.opacity = tc.settings.controllerOpacity;
+
+    var dragSpan = document.createElement("span");
+    dragSpan.setAttribute("data-action", "drag");
+    dragSpan.setAttribute("class", "draggable");
+    dragSpan.textContent = speed;
+
+    var controlsSpan = document.createElement("span");
+    controlsSpan.setAttribute("id", "controls");
+
+    var buttons = [
+      ["rewind", "rw", "\u00AB"],
+      ["slower", "", "\u2212"],
+      ["faster", "", "+"],
+      ["advance", "rw", "\u00BB"],
+      ["display", "hideButton", "\u00D7"]
+    ];
+    buttons.forEach((btn) => {
+      var button = document.createElement("button");
+      button.setAttribute("data-action", btn[0]);
+      if (btn[1]) {
+        button.setAttribute("class", btn[1]);
+      }
+      button.textContent = btn[2];
+      controlsSpan.appendChild(button);
+    });
+
+    controller.appendChild(dragSpan);
+    controller.appendChild(controlsSpan);
+    shadow.appendChild(controller);
     shadow.querySelector(".draggable").addEventListener(
       "mousedown",
       (e) => {

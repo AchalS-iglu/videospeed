@@ -183,7 +183,9 @@ function parseSiteSpeedsText(text) {
 
 function renderSiteSpeeds(text) {
   var list = document.getElementById("siteSpeedsList");
-  list.innerHTML = "";
+  while (list.firstChild) {
+    list.removeChild(list.firstChild);
+  }
   var rules = parseSiteSpeedsText(text || "");
   if (rules.length === 0) {
     add_site_speed("", "");
@@ -207,29 +209,62 @@ function buildSiteSpeedsText() {
 }
 
 function add_shortcut() {
-  var html = `<select class="customDo">
-    <option value="slower">Decrease speed</option>
-    <option value="faster">Increase speed</option>
-    <option value="rewind">Rewind</option>
-    <option value="advance">Advance</option>
-    <option value="reset">Reset speed</option>
-    <option value="fast">Preferred speed</option>
-    <option value="muted">Mute</option>
-    <option value="pause">Pause</option>
-    <option value="mark">Set marker</option>
-    <option value="jump">Jump to marker</option>
-    <option value="display">Show/hide controller</option>
-    </select>
-    <input class="customKey" type="text" placeholder="press a key"/>
-    <input class="customValue" type="text" placeholder="value (0.10)"/>
-    <select class="customForce">
-    <option value="false">Do not disable website key bindings</option>
-    <option value="true">Disable website key bindings</option>
-    </select>
-    <button class="removeParent">X</button>`;
   var div = document.createElement("div");
   div.setAttribute("class", "row customs");
-  div.innerHTML = html;
+  var actionSelect = document.createElement("select");
+  actionSelect.setAttribute("class", "customDo");
+  var actions = [
+    ["slower", "Decrease speed"],
+    ["faster", "Increase speed"],
+    ["rewind", "Rewind"],
+    ["advance", "Advance"],
+    ["reset", "Reset speed"],
+    ["fast", "Preferred speed"],
+    ["muted", "Mute"],
+    ["pause", "Pause"],
+    ["mark", "Set marker"],
+    ["jump", "Jump to marker"],
+    ["display", "Show/hide controller"]
+  ];
+  actions.forEach((item) => {
+    var option = document.createElement("option");
+    option.value = item[0];
+    option.textContent = item[1];
+    actionSelect.appendChild(option);
+  });
+
+  var keyInput = document.createElement("input");
+  keyInput.setAttribute("class", "customKey");
+  keyInput.setAttribute("type", "text");
+  keyInput.setAttribute("placeholder", "press a key");
+
+  var valueInput = document.createElement("input");
+  valueInput.setAttribute("class", "customValue");
+  valueInput.setAttribute("type", "text");
+  valueInput.setAttribute("placeholder", "value (0.10)");
+
+  var forceSelect = document.createElement("select");
+  forceSelect.setAttribute("class", "customForce");
+  var forceOptions = [
+    ["false", "Do not disable website key bindings"],
+    ["true", "Disable website key bindings"]
+  ];
+  forceOptions.forEach((item) => {
+    var option = document.createElement("option");
+    option.value = item[0];
+    option.textContent = item[1];
+    forceSelect.appendChild(option);
+  });
+
+  var removeButton = document.createElement("button");
+  removeButton.setAttribute("class", "removeParent");
+  removeButton.textContent = "X";
+
+  div.appendChild(actionSelect);
+  div.appendChild(keyInput);
+  div.appendChild(valueInput);
+  div.appendChild(forceSelect);
+  div.appendChild(removeButton);
   var customs_element = document.getElementById("customs");
   customs_element.insertBefore(
     div,
